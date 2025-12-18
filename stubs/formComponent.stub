@@ -1,0 +1,28 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\View\Component;
+
+class {{ class }}Form extends Component
+{
+    public $action;
+    public $formId;
+    public $btnId;
+
+    public function __construct($action = 'create')
+    {
+        $this->action = $action;
+        $this->formId = $action == 'create' ? '{{ module_name }}AddForm' : '{{ module_name }}EditForm';
+        $this->btnId = $action == 'create' ? '{{ module_name }}CreateBtn' : '{{ module_name }}EditBtn';
+    }
+
+    public function render()
+    {
+        return view('{{ view_path }}.form', [
+            'action' => $this->action,
+            'formId' => $this->formId,
+            'btnId' => $this->btnId
+        ]);
+    }
+}

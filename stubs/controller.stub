@@ -1,0 +1,51 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Http\Controllers\BaseModuleController;
+use App\Http\Requests\{{ request_class }};
+use App\Services\{{ service_class }};
+use Illuminate\Http\Request;
+
+class {{ class }} extends BaseModuleController
+{
+    protected $moduleService;
+
+    public function __construct({{ service_class }} $moduleService)
+    {
+        $this->moduleService = $moduleService;
+        parent::__construct($moduleService, '{{ module_name }}', {{ request_class }}::class);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $this->validateRequest($request);
+        $pageData = $this->getPageData();
+
+        try {
+            $saved = $this->moduleService->createItem($validated);
+            return $saved
+                ? $this->sendSuccessResponse("{$pageData->singular_name} created successfully", $saved)
+                : $this->sendErrorResponse('Something went wrong');
+        } catch (\Exception $e) {
+            return $this->sendErrorResponse('Something went wrong', 500, $e->getMessage());
+        }
+    }
+
+    public function update(Request $request)
+    {
+        $validated = $this->validateRequest($request);
+        $pageData = $this->getPageData();
+
+        try {
+            $updated = $this->moduleService->updateItem($validated);
+            return $updated
+                ? $this->sendSuccessResponse("{$pageData->singular_name} updated successfully", $updated)
+                : $this->sendErrorResponse('Something went wrong');
+        } catch (\Exception $e) {
+            return $this->sendErrorResponse('Something went wrong', 500, $e->getMessage());
+        }
+    }
+
+    {{ custom_methods }}
+}

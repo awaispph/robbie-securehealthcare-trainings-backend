@@ -1,0 +1,494 @@
+@extends('layouts.master')
+
+@section('title', $page_data->plural_name)
+
+@section('vendor-style')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!--datatable css-->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" />
+    <!--datatable responsive css-->
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+@endsection
+
+@section('content')
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <x-card-header
+                    title="{{ $page_data->plural_name }}"
+                    addButtonText="{{ __('common.actions.add_new') }}"
+                    addButtonModal="addModal"
+                    :moduleId="$page_data->module_id"
+                />
+
+                <div class="card-body">
+                    <x-datatable
+                        :columns="[
+                            [
+                                'data' => null,
+                                'defaultContent' => '',
+                                'title' => '',
+                                'orderable' => false,
+                                'searchable' => false,
+                                'responsivePriority' => 1,
+                            ],
+                            {{ columns }}
+                        ]"
+                        :ajax-url="$url->all_data"
+                        table-id="listing-table"
+                        :default-order="{{ default_order }}"
+                    />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <x-modal id="addModal"
+        title="{{ __('{{ studly_module_name }}/{{ studly_module_name }}.modal_card_title.add', ['singular_name' => $page_data->singular_name]) }}"
+        size="modal-lg">
+        <div id="addModalLoader" class="text-center p-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div id="addModalContent" style="display: none;">
+            <x-{{ module_name }}-form action="create" />
+        </div>
+    </x-modal>
+
+    <!-- Edit Modal -->
+    <x-modal id="editBtnModal"
+        title="{{ __('{{ studly_module_name }}/{{ studly_module_name }}.modal_card_title.edit', ['singular_name' => $page_data->singular_name]) }}"
+        size="modal-lg">
+        <div id="editModalLoader" class="text-center p-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div id="editModalContent" style="display: none;">
+            <x-{{ module_name }}-form action="edit" />
+        </div>
+    </x-modal>
+
+    <!-- Delete Confirmation Modal -->
+    <x-delete-modal />
+@endsection
+
+@section('vendor-script')
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!--datatable js-->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+@endsection
+
+@section('page-script')
+    @stack('scripts')
+    <script>
+        $(document).ready(function() {
+            const tableId = '#listing-table';
+            let isViewingArchived = false;
+            const urls = @json($url);
+
+            const ajaxConfig = {
+                table: {
+                    datatableSelector: tableId,
+                },
+                add: {
+                    url: urls.add,
+                    method: 'GET',
+                    modalSelector: '#addModal',
+                    preloaderSelector: '#addModalLoader',
+                    contentSelector: '#addModalContent',
+                    formSelector: '#{{ module_name }}AddForm',
+                    dropdownsConfig: []
+                },
+                save: {
+                    url: urls.save,
+                    method: 'POST',
+                    btnSelector: '#{{ module_name }}CreateBtn',
+                    modalSelector: '#addModal',
+                    formSelector: '#{{ module_name }}AddForm',
+                    datatableSelector: tableId,
+                },
+                update: {
+                    url: urls.update,
+                    method: 'POST',
+                    btnSelector: '#{{ module_name }}EditBtn',
+                    modalSelector: '#editBtnModal',
+                    formSelector: '#{{ module_name }}EditForm',
+                    datatableSelector: tableId,
+                },
+                delete: {
+                    url: urls.delete,
+                    method: 'POST',
+                    datatableSelector: tableId,
+                    btnSelector: '#deleteConfirmBtn',
+                    modalSelector: '#deleteModal',
+                },
+                getSingle: {
+                    url: urls.get_single,
+                    method: 'POST',
+                },
+                restore: {
+                    url: urls.restore,
+                    method: 'POST',
+                },
+                archive: {
+                    url: urls.archived,
+                },
+                unArchive: {
+                    url: urls.all_data,
+                },
+                edit: {
+                    modalSelector: '#editBtnModal',
+                    formSelector: '#{{ module_name }}EditForm',
+                    preloaderSelector: '#editModalLoader',
+                    contentSelector: '#editModalContent',
+                    responseDataKey: 'data',
+                    dropdownsConfig: [],
+                    // responseFunction: function(data) {
+                    //     if (!data.error) {
+                    //         const { edit } = ajaxConfig;
+                    //         const responseDataKey = edit.responseDataKey;
+                    //         fillFormData(edit.formSelector, data.data[responseDataKey]);
+                    //         fillEditForm(data.data);
+                    //     } else {
+                    //         displayAlert('toast', 'Error', data.message, 'error');
+                    //     }
+                    // }
+                },
+                table: {
+                    datatableSelector: tableId,
+                }
+            };
+
+            // Add Item Button Click
+            $(document).on('click', '.addModal-btn', function() {
+                ajaxAway({
+                    URL: ajaxConfig.add.url,
+                    Method: ajaxConfig.add.method,
+                    AlertType: false,
+                    ModalSelector: ajaxConfig.add.modalSelector,
+                    PreloaderSelector: ajaxConfig.add.preloaderSelector,
+                    ContentSelector: ajaxConfig.add.contentSelector,
+                    ModalVisibility: true,
+                    openModal: true,
+                    SuccessAction: function(response) {},
+                    ErrorAction: function() {}
+                });
+            });
+
+            // Add Form Submit
+            $('#{{ module_name }}AddForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = $(this).serialize();
+
+                ajaxAway({
+                    URL: ajaxConfig.save.url,
+                    Method: ajaxConfig.save.method,
+                    Data: formData,
+                    AlertType: 'toast',
+                    Async: true,
+                    BtnSelector: ajaxConfig.save.btnSelector,
+                    ModalSelector: ajaxConfig.save.modalSelector,
+                    FormSelector: ajaxConfig.save.formSelector,
+                    DatatableSelector: ajaxConfig.save.datatableSelector,
+                });
+            });
+
+            // Open Edit Modal
+            $(document).on('click', '.edit-item-btn', function() {
+                const id = $(this).data('id');
+
+                ajaxAway({
+                    URL: ajaxConfig.getSingle.url,
+                    Data: { id },
+                    Method: ajaxConfig.getSingle.method,
+                    ModalSelector: ajaxConfig.edit.modalSelector,
+                    PreloaderSelector: ajaxConfig.edit.preloaderSelector,
+                    ContentSelector: ajaxConfig.edit.contentSelector,
+                    ModalVisibility: true,
+                    openModal: true,
+                    SuccessAction: function(response) {
+                        // fill the form
+                        fillEditForm(response.data.data);
+                    },
+                    ErrorAction: function() {}
+                });
+            });
+
+            // Edit Form Submit
+            $('#{{ module_name }}EditForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = $(this).serialize();
+
+                ajaxAway({
+                    URL: ajaxConfig.update.url,
+                    Method: ajaxConfig.update.method,
+                    Data: formData,
+                    AlertType: 'toast',
+                    Async: true,
+                    BtnSelector: ajaxConfig.update.btnSelector,
+                    ModalSelector: ajaxConfig.update.modalSelector,
+                    FormSelector: ajaxConfig.update.formSelector,
+                    DatatableSelector: ajaxConfig.update.datatableSelector,
+                });
+            });
+
+            // Delete Item Button Click
+            $(document).on('click', '.delete-item-btn', function() {
+                const id = $(this).data('id');
+
+                // Store the id in the modal itself rather than just the button
+                $('#deleteModal').data('id', id);
+                $('#deleteModal').modal('show');
+            });
+
+            // deleteConfirmBtn
+            $(document).on('click', '#deleteConfirmBtn', function() {
+                // Get the id from the modal rather than the button
+                const id = $('#deleteModal').data('id');
+
+                ajaxAway({
+                    URL: ajaxConfig.delete.url,
+                    Data: { id },
+                    Method: ajaxConfig.delete.method,
+                    Async: true,
+                    BtnSelector: ajaxConfig.delete.btnSelector,
+                    ModalSelector: ajaxConfig.delete.modalSelector,
+                    DatatableSelector: ajaxConfig.delete.datatableSelector,
+                    AlertType: 'toast',
+                });
+            });
+
+            // Clear stored id when delete modal is closed
+            $('#deleteModal').on('hidden.bs.modal', function() {
+                $(this).removeData('id');
+            });
+
+            // Show Archived Items Button Click Event
+            $(document).on('click', '#showArchivedItems', function(e) {
+                e.preventDefault();
+                const dataTable = $(ajaxConfig.table.datatableSelector).DataTable();
+                dataTable.ajax.url(ajaxConfig.archive.url).load();
+                $('.archived-badge').show();
+                isViewingArchived = true;
+            });
+
+            // Show Unarchived Items Button Click Event
+            $(document).on('click', '.see-unarchived', function(e) {
+                e.preventDefault();
+                const dataTable = $(ajaxConfig.table.datatableSelector).DataTable();
+                dataTable.ajax.url(ajaxConfig.unArchive.url).load();
+                $('.archived-badge').hide();
+                isViewingArchived = false;
+            });
+
+            // Restore Item Button Click Event
+            $(document).on('click', '.restore-item-btn', function(e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+
+                ajaxAway({
+                    URL: ajaxConfig.restore.url,
+                    Data: { id },
+                    Method: ajaxConfig.restore.method,
+                    AlertType: 'toast',
+                    SuccessAction: function(data) {
+                        if (data.success) {
+                            const dataTable = $(ajaxConfig.table.datatableSelector)
+                                .DataTable();
+                            dataTable.ajax.url(isViewingArchived ?
+                                ajaxConfig.archive.url :
+                                ajaxConfig.unArchive.url
+                            ).load();
+                            if (!isViewingArchived) {
+                                $('.archived-badge').hide();
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Reset forms on modal close
+            $('.modal').on('hidden.bs.modal', function() {
+                $(this).find('form').trigger('reset');
+            });
+
+            // Initialize select2 for all select fields
+            $('.select2-field').select2();
+
+            // Initialize flatpickr for all date inputs
+            flatpickr(".flatpickr-date-input", {
+                allowInput: true,
+                altInput: true,
+                altFormat: "d M, Y",
+                dateFormat: "Y-m-d",
+            });
+
+            // Initialize flatpickr for all time inputs
+            flatpickr(".flatpickr-time-input", {
+                enableTime: true,
+                noCalendar: true, // This removes the calendar
+                dateFormat: "H:i",
+                time_24hr: true, // Use 24 hour time
+                altInput: true,
+                allowInput: true,
+                altFormat: "H:i",
+            });
+
+            // Initialize flatpickr for all datetime inputs
+            flatpickr(".flatpickr-datetime-input", {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+                altInput: true,
+                allowInput: true,
+                altFormat: "d M, Y H:i",
+            });
+
+            function fillEditForm(data) {
+                const form = $('#{{ module_name }}EditForm');
+
+                // Set ID
+                form.find('[name="id"]').val(data.id);
+
+                // Dynamically fill all fields from response data
+                Object.keys(data).forEach(fieldName => {
+                    const input = form.find(`[name="${fieldName}"], [name="${fieldName}[]"]`);
+                    if (!input.length) return;
+
+                    const tagName = input.prop('tagName')?.toLowerCase();
+
+                    // Handle different HTML tags
+                    switch(tagName) {
+                        case 'select':
+                            handleSelect(input, data[fieldName]);
+                            break;
+
+                        case 'textarea':
+                            input.val(data[fieldName]);
+                            break;
+
+                        case 'input':
+                            handleInput(input, fieldName, data[fieldName]);
+                            break;
+
+                        default:
+                            input.val(data[fieldName]);
+                            break;
+                    }
+                });
+            }
+
+            function handleSelect(input, value) {
+                if (input.hasClass('select2-field')) {
+                    input.select2('destroy');
+                }
+
+                if (input.prop('multiple')) {
+                    let values = [];
+                    if (typeof value === 'string') {
+                        try {
+                            values = JSON.parse(value);
+                        } catch(e) {
+                            values = value.split(',');
+                        }
+                    } else if (Array.isArray(value)) {
+                        values = value;
+                    }
+                    input.val(values).trigger('change');
+                } else {
+                    input.val(value).trigger('change');
+                }
+
+                input.select2({
+                    width: '100%',
+                    dropdownParent: input.closest('.modal')
+                });
+            }
+
+            function handleDateInput(input, value) {
+                if (input._flatpickr) {
+                    input[0]._flatpickr.setDate(value, true);
+                } else {
+                    input.val(value);
+                }
+            }
+
+            function handleTimeInput(input, value) {
+                if (input._flatpickr) {
+                    input[0]._flatpickr.setTime(value, true);
+                } else {
+                    input.val(value);
+                }
+            }
+
+            function handleDateTimeInput(input, value) {
+                if (input._flatpickr) {
+                    input[0]._flatpickr.setDate(value, true);
+                } else {
+                    input.val(value);
+                }
+            }
+
+            function handleInput(input, fieldName, value) {
+                const inputType = input.attr('type');
+                const isTimeInput = input.hasClass('flatpickr-time-input');
+                const isDateInput = input.hasClass('flatpickr-date-input');
+                const isDateTimeInput = input.hasClass('flatpickr-datetime-input');
+
+                if (isDateInput || isTimeInput || isDateTimeInput) {
+                    if (input[0]._flatpickr) {
+                        input[0]._flatpickr.setDate(value, true);
+                    } else {
+                        input.val(value);
+                    }
+                    return;
+                }
+
+
+                switch(inputType) {
+                    case 'checkbox':
+                        input.prop('checked', value === 1 || value === true);
+                        break;
+
+                    case 'radio':
+                        input.closest('form')
+                            .find(`[name="${fieldName}"][value="${value}"]`)
+                            .prop('checked', true);
+                        break;
+
+                    case 'file':
+                        input.val('');
+                        if (value) {
+                            const fileNameDisplay = input.siblings('.file-name-display');
+                            if (fileNameDisplay.length) {
+                                fileNameDisplay.text(value);
+                            }
+                        }
+                        break;
+
+                    case 'date':
+                    case 'datetime-local':
+                        handleDateInput(input, value);
+                        break;
+
+                    case 'time':
+                        handleTimeInput(input, value);
+                        break;
+
+                    case 'datetime':
+                        handleDateTimeInput(input, value);
+                        break;
+
+                    default:
+                        input.val(value);
+                        break;
+                }
+            }
+        });
+    </script>
+@endsection

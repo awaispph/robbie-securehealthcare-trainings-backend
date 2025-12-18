@@ -1,0 +1,27 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class {{ class }} extends JsonResource
+{
+    private static $moduleId;
+
+    public static function collection($resource)
+    {
+        self::$moduleId = session()->get('page_data')->module_id;
+        return parent::collection($resource);
+    }
+
+    public function toArray($request)
+    {
+        $array = [
+            {{ array_content }}
+        ];
+
+        return $array;
+    }
+
+
+}

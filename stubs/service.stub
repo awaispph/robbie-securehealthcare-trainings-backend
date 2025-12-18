@@ -1,0 +1,130 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Models\{{ model }};
+use App\Http\Resources\{{ dtr_class }};
+
+class {{ class }} extends BaseService
+{
+    public function __construct({{ model }} $model)
+    {
+        parent::__construct($model, {{ dtr_class }}::class);
+    }
+
+    protected function getDefaultSearchColumns()
+    {
+        return [
+            {{ search_columns }}
+        ];
+    }
+
+    protected function mapColumnName($columnName)
+    {
+        switch ($columnName) {
+            case 'created_at':
+                return 'created_at';
+            default:
+                return $columnName;
+        }
+    }
+
+    public function getList($params = [])
+    {
+        $query = $this->model->query();
+
+        // Handle search
+        if (!empty($params['search']['value'])) {
+            $searchValue = $params['search']['value'];
+            $query->where(function ($q) use ($searchValue) {
+                $searchableFields = $this->model->getSearchableFields();
+                foreach ($searchableFields as $field) {
+                    $q->orWhere($field, 'LIKE', "%{$searchValue}%");
+                }
+            });
+        }
+
+        // Handle sorting
+        if (!empty($params['order'])) {
+            foreach ($params['order'] as $order) {
+                $columnIndex = $order['column'];
+                $columnName = $params['columns'][$columnIndex]['data'];
+                $direction = $order['dir'];
+                $query->orderBy($columnName, $direction);
+            }
+        }
+
+        // Handle pagination
+        $start = $params['start'] ?? 0;
+        $length = $params['length'] ?? 10;
+        $total = $query->count();
+
+        $items = $query->skip($start)->take($length)->get();
+
+        return [
+            'data' => $this->dtrClass::collection($items),
+            'recordsTotal' => $total,
+            'recordsFiltered' => $total,
+        ];
+    }
+
+    public function createItem($data)
+    {
+        try {
+            $data['added_by'] = auth()->id();
+            $item = $this->model->create($data);
+
+            if ($item) {
+                // Handle relationships if any
+                $this->handleRelationships($item, $data);
+
+                return $item->fresh();
+            }
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('Error creating item: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateItem($data)
+    {
+        try {
+            $item = $this->model->findOrFail($data['id']);
+            $data['updated_by'] = auth()->id();
+
+            if ($item->update($data)) {
+                // Handle relationships if any
+                $this->handleRelationships($item, $data);
+
+                return $item->fresh();
+            }
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('Error updating item: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function handleRelationships($item, $data)
+    {
+        // Handle belongsToMany relationships
+        if (!empty($data['pivot_data'])) {
+            foreach ($data['pivot_data'] as $relation => $ids) {
+                if (method_exists($item, $relation)) {
+                    $item->$relation()->sync($ids);
+                }
+            }
+        }
+
+        // Handle hasMany relationships
+        if (!empty($data['has_many_data'])) {
+            foreach ($data['has_many_data'] as $relation => $items) {
+                if (method_exists($item, $relation)) {
+                    $item->$relation()->delete();
+                    $item->$relation()->createMany($items);
+                }
+            }
+        }
+    }
+}

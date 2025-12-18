@@ -1,0 +1,62 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class {{ class }} extends FormRequest
+{
+    public function authorize()
+    {
+        return true;
+    }
+
+    public function rules()
+    {
+        $rules = [
+            {{ rules }}
+        ];
+
+        // Handle unique validation for updates
+        if ($this->has('id')) {
+            foreach ($rules as $field => $fieldRules) {
+                if (is_array($fieldRules)) {
+                    foreach ($fieldRules as &$rule) {
+                        if (is_string($rule) && strpos($rule, 'unique:') === 0 && strpos($rule, ',{id}') !== false) {
+                            $rule = str_replace('{id}', $this->id, $rule);
+                        }
+                    }
+                    $rules[$field] = $fieldRules;
+                }
+            }
+        } else {
+            // Remove {id} placeholder for create operations
+            foreach ($rules as $field => $fieldRules) {
+                if (is_array($fieldRules)) {
+                    foreach ($fieldRules as &$rule) {
+                        if (is_string($rule) && strpos($rule, 'unique:') === 0) {
+                            $rule = str_replace(',{id}', '', $rule);
+                        }
+                    }
+                    $rules[$field] = $fieldRules;
+                }
+            }
+        }
+
+        return $rules;
+    }
+
+    public function attributes()
+    {
+        return [
+            {{ attributes }}
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            {{ messages }}
+        ];
+    }
+}

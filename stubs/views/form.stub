@@ -1,0 +1,20 @@
+<form id="{{ $formId }}">
+    @csrf
+    @if ($action == 'edit')
+        <input type="hidden" name="id" value="">
+    @endif
+
+    <div class="modal-body">
+        <div class="row">
+            {{ form_fields }}
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('common.actions.close') }}</button>
+        <button type="submit" class="btn btn-success" id="{{ $btnId }}">
+            {{ $action == 'create' ? __('common.actions.submit') : __('common.actions.update') }}
+            <span id="{{ $btnId }}_span" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+    </div>
+</form>
