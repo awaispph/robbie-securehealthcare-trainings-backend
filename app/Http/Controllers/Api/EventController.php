@@ -183,6 +183,18 @@ class EventController extends Controller
 
     public function removeCandidate(Event $event, $candidateId)
     {
+        // Check if candidate has any attendance record with status (yes, no, or partial) for this event
+        $hasAttendanceRecord = EventCandidateCourse::where('event_id', $event->id)
+            ->where('candidate_id', $candidateId)
+            ->whereIn('attended', ['yes', 'no', 'partial'])
+            ->exists();
+
+        if ($hasAttendanceRecord) {
+            return response()->json([
+                'message' => 'Cannot remove candidate. This candidate has attendance records for this event.'
+            ], 422);
+        }
+
         $event->candidates()->detach($candidateId);
         EventCandidateCourse::where('event_id', $event->id)
             ->where('candidate_id', $candidateId)
