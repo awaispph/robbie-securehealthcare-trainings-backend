@@ -86,19 +86,14 @@ class CandidateController extends Controller
 
     public function destroy(Candidate $candidate)
     {
-        // Check if candidate attended any past events (end_date in the past AND has attendance marked as yes)
-        // Status doesn't matter - only check if event has ended and candidate attended
-        $attendedPastEvents = $candidate->events()
-            ->where('end_date', '<', now()->toDateString())
-            ->whereHas('attendance', function ($query) use ($candidate) {
-                $query->where('candidate_id', $candidate->id)
-                    ->where('attended', 'yes');
-            })
+        // Check if candidate has any attendance record with status (yes, no, or partial)
+        $hasAttendanceRecord = \App\Models\EventCandidateCourse::where('candidate_id', $candidate->id)
+            ->whereIn('attended', ['yes', 'no', 'partial'])
             ->exists();
 
-        if ($attendedPastEvents) {
+        if ($hasAttendanceRecord) {
             return response()->json([
-                'message' => 'Cannot delete candidate. This candidate has attended one or more past events.'
+                'message' => 'Cannot delete candidate. This candidate has attendance records for one or more events.'
             ], 422);
         }
 
