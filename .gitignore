@@ -37,8 +37,12 @@ yarn-error.log
 !/storage/logs/.gitkeep
 
 /storage/app/*
+/storage/app/public/documents/
 !/storage/app/.gitkeep
 !/storage/app/public/.gitkeep
+!/storage/app/
+!/storage/app/public/
+!/storage/app/public/logo.png
 
 # Keep the existing framework gitignore
 !/storage/framework/.gitignore
